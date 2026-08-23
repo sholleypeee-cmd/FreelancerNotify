@@ -56,6 +56,11 @@
       color: white;
       font-size: 16px;
       font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.6;
     }
 
     #status {
@@ -86,29 +91,95 @@
   </div>
 
   <script>
+    const SUPABASE_URL = "https://umwztfnsyrbilsuwchik.supabase.co/rest/v1/";
+    const SUPABASE_KEY = "sb_publishable_SSIPoJViFPvqXJtHxUkjjw_7JSKnaSq";
+
     const params = new URLSearchParams(window.location.search);
     const deviceId = params.get("device");
 
     const deviceInfo = document.getElementById("deviceInfo");
     const status = document.getElementById("status");
+    const connectButton = document.getElementById("connectButton");
+
+    function getBaseUrl() {
+      return SUPABASE_URL
+        .replace(/\/rest\/v1\/?$/, "")
+        .replace(/\/$/, "");
+    }
 
     if (deviceId) {
       deviceInfo.textContent = "Chrome device detected";
     } else {
       deviceInfo.textContent = "No device QR information found";
+      connectButton.disabled = true;
     }
 
-    document
-      .getElementById("connectButton")
-      .addEventListener("click", () => {
+    connectButton.addEventListener("click", async () => {
 
-        if (!deviceId) {
-          status.textContent = "No device was found.";
+      if (!deviceId) {
+        status.textContent = "No device was found.";
+        return;
+      }
+
+      connectButton.disabled = true;
+      status.textContent = "Connecting...";
+
+      const phoneId =
+        localStorage.getItem("freelancerNotifyPhoneId") ||
+        crypto.randomUUID();
+
+      localStorage.setItem(
+        "freelancerNotifyPhoneId",
+        phoneId
+      );
+
+      try {
+
+        const response = await fetch(
+          `${getBaseUrl()}/rest/v1/phone_devices`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "apikey": SUPABASE_KEY,
+              "Authorization": `Bearer ${SUPABASE_KEY}`,
+              "Prefer": "return=minimal"
+            },
+            body: JSON.stringify({
+              device_id: deviceId,
+              phone_id: phoneId,
+              status: "connected"
+            })
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+
+          status.textContent =
+            "Pairing failed: " +
+            response.status;
+
+          console.log(errorText);
+          connectButton.disabled = false;
           return;
         }
 
-        status.textContent = "Device detected. Pairing system ready.";
-      });
+        status.textContent =
+          "✅ Device connected successfully!";
+
+        connectButton.textContent = "Connected";
+
+      } catch (error) {
+
+        status.textContent =
+          "Connection error.";
+
+        console.log(error);
+
+        connectButton.disabled = false;
+      }
+    });
   </script>
 
 </body>
