@@ -36,16 +36,14 @@
       color: #b8c2d1;
     }
 
-    input {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 14px;
-      margin-top: 15px;
-      border-radius: 10px;
-      border: 1px solid #334155;
+    .device {
+      margin: 20px 0;
+      padding: 15px;
       background: #0f172a;
-      color: white;
-      font-size: 16px;
+      border-radius: 10px;
+      word-break: break-all;
+      font-size: 13px;
+      color: #22c55e;
     }
 
     button {
@@ -58,7 +56,6 @@
       color: white;
       font-size: 16px;
       font-weight: bold;
-      cursor: pointer;
     }
 
     #status {
@@ -74,13 +71,11 @@
 
     <h1>Freelancer Notify</h1>
 
-    <p>Connect your phone to a Chrome device.</p>
+    <p>Connect this phone to your Chrome device.</p>
 
-    <input
-      id="pairingCode"
-      type="text"
-      placeholder="Enter pairing code"
-    >
+    <div class="device" id="deviceInfo">
+      Checking device...
+    </div>
 
     <button id="connectButton">
       Connect Device
@@ -91,23 +86,28 @@
   </div>
 
   <script>
+    const params = new URLSearchParams(window.location.search);
+    const deviceId = params.get("device");
+
+    const deviceInfo = document.getElementById("deviceInfo");
+    const status = document.getElementById("status");
+
+    if (deviceId) {
+      deviceInfo.textContent = "Chrome device detected";
+    } else {
+      deviceInfo.textContent = "No device QR information found";
+    }
+
     document
       .getElementById("connectButton")
       .addEventListener("click", () => {
 
-        const code =
-          document.getElementById("pairingCode").value.trim();
-
-        const status =
-          document.getElementById("status");
-
-        if (!code) {
-          status.textContent = "Please enter a pairing code.";
+        if (!deviceId) {
+          status.textContent = "No device was found.";
           return;
         }
 
-        status.textContent =
-          "Pairing system ready for: " + code;
+        status.textContent = "Device detected. Pairing system ready.";
       });
   </script>
 
