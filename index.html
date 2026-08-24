@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Freelancer Notify</title>
 
   <style>
@@ -40,6 +41,8 @@
       padding: 15px;
       background: #0f172a;
       border-radius: 10px;
+      word-break: break-all;
+      font-size: 13px;
       color: #22c55e;
     }
 
@@ -53,6 +56,7 @@
       color: white;
       font-size: 16px;
       font-weight: bold;
+      cursor: pointer;
     }
 
     button:disabled {
@@ -68,23 +72,23 @@
 
 <body>
 
-<div class="card">
+  <div class="card">
 
-  <h1>Freelancer Notify</h1>
+    <h1>Freelancer Notify</h1>
 
-  <p>Connect this phone to your Chrome device.</p>
+    <p>Connect this phone to your Chrome device.</p>
 
-  <div class="device" id="deviceInfo">
-    Checking device...
+    <div class="device" id="deviceInfo">
+      Checking device...
+    </div>
+
+    <button id="connectButton">
+      Connect Device
+    </button>
+
+    <div id="status"></div>
+
   </div>
-
-  <button id="connectButton">
-    Connect Device
-  </button>
-
-  <div id="status"></div>
-
-</div>
 
 <script>
 
@@ -92,16 +96,18 @@ const SUPABASE_URL =
   "https://umwztfnsyrbilsuwchik.supabase.co";
 
 const SUPABASE_KEY =
-  "sb_publishable_SSIPoJViFPvqXJtHxUkjjw_7JSKnaSqsss";
+  "sb_publishable_SSIPoJViFPvqXJtHxUkjjw_7JSKnaSq";
 
 const VAPID_PUBLIC_KEY =
   "BD4_cOCLPGjLuHMAHaCYEp9HyDiBKZAy3QKaOHhr_tVdS8qzw_y5sHecNsp2R-KOl5ivICE8Pjx5wyfHeV-7TCw";
+
 
 const params =
   new URLSearchParams(window.location.search);
 
 const deviceId =
   params.get("device");
+
 
 const deviceInfo =
   document.getElementById("deviceInfo");
@@ -116,7 +122,9 @@ const connectButton =
 function urlBase64ToUint8Array(base64String) {
 
   const padding =
-    "=".repeat((4 - base64String.length % 4) % 4);
+    "=".repeat(
+      (4 - base64String.length % 4) % 4
+    );
 
   const base64 =
     (base64String + padding)
@@ -127,7 +135,9 @@ function urlBase64ToUint8Array(base64String) {
     window.atob(base64);
 
   return Uint8Array.from(
-    [...rawData].map(char => char.charCodeAt(0))
+    [...rawData].map(
+      char => char.charCodeAt(0)
+    )
   );
 }
 
@@ -151,20 +161,25 @@ connectButton.addEventListener(
   async () => {
 
     if (!deviceId) {
+
       status.textContent =
         "No device was found.";
+
       return;
     }
+
 
     connectButton.disabled = true;
 
     status.textContent =
       "Requesting notification permission...";
 
+
     try {
 
       const permission =
         await Notification.requestPermission();
+
 
       if (permission !== "granted") {
 
@@ -172,6 +187,7 @@ connectButton.addEventListener(
           "Notification permission was not granted.";
 
         connectButton.disabled = false;
+
         return;
       }
 
@@ -181,7 +197,9 @@ connectButton.addEventListener(
 
 
       const registration =
-        await navigator.serviceWorker.register("/sw.js");
+        await navigator.serviceWorker.register(
+          "/sw.js"
+        );
 
 
       await navigator.serviceWorker.ready;
@@ -223,7 +241,6 @@ connectButton.addEventListener(
           "freelancerNotifyPhoneId",
           phoneId
         );
-
       }
 
 
@@ -235,7 +252,6 @@ connectButton.addEventListener(
         await fetch(
           `${SUPABASE_URL}/rest/v1/phone_devices?on_conflict=phone_id`,
           {
-
             method: "POST",
 
             headers: {
@@ -245,9 +261,6 @@ connectButton.addEventListener(
 
               "apikey":
                 SUPABASE_KEY,
-
-              "Authorization":
-                `Bearer ${SUPABASE_KEY}`,
 
               "Prefer":
                 "resolution=merge-duplicates,return=minimal"
@@ -281,7 +294,6 @@ connectButton.addEventListener(
                 true
 
             })
-
           }
         );
 
@@ -291,8 +303,9 @@ connectButton.addEventListener(
         const errorText =
           await response.text();
 
-        console.log(
+        console.error(
           "Supabase error:",
+          response.status,
           errorText
         );
 
@@ -301,6 +314,7 @@ connectButton.addEventListener(
           response.status;
 
         connectButton.disabled = false;
+
         return;
       }
 
@@ -311,14 +325,17 @@ connectButton.addEventListener(
       connectButton.textContent =
         "Connected";
 
-    }
 
-    catch (error) {
+    } catch (error) {
 
-      console.error(error);
+      console.error(
+        "Connection error:",
+        error
+      );
 
       status.textContent =
-        "Error: " + error.message;
+        "Error: " +
+        error.message;
 
       connectButton.disabled = false;
 
