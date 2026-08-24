@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>Freelancer Notify</title>
 
   <style>
@@ -41,8 +40,6 @@
       padding: 15px;
       background: #0f172a;
       border-radius: 10px;
-      word-break: break-all;
-      font-size: 13px;
       color: #22c55e;
     }
 
@@ -56,7 +53,6 @@
       color: white;
       font-size: 16px;
       font-weight: bold;
-      cursor: pointer;
     }
 
     button:disabled {
@@ -72,115 +68,266 @@
 
 <body>
 
-  <div class="card">
+<div class="card">
 
-    <h1>Freelancer Notify</h1>
+  <h1>Freelancer Notify</h1>
 
-    <p>Connect this phone to your Chrome device.</p>
+  <p>Connect this phone to your Chrome device.</p>
 
-    <div class="device" id="deviceInfo">
-      Checking device...
-    </div>
-
-    <button id="connectButton">
-      Connect Device
-    </button>
-
-    <div id="status"></div>
-
+  <div class="device" id="deviceInfo">
+    Checking device...
   </div>
 
-  <script>
-    const SUPABASE_URL = "https://umwztfnsyrbilsuwchik.supabase.co/rest/v1/";
-    const SUPABASE_KEY = "sb_publishable_SSIPoJViFPvqXJtHxUkjjw_7JSKnaSq";
+  <button id="connectButton">
+    Connect Device
+  </button>
 
-    const params = new URLSearchParams(window.location.search);
-    const deviceId = params.get("device");
+  <div id="status"></div>
 
-    const deviceInfo = document.getElementById("deviceInfo");
-    const status = document.getElementById("status");
-    const connectButton = document.getElementById("connectButton");
+</div>
 
-    function getBaseUrl() {
-      return SUPABASE_URL
-        .replace(/\/rest\/v1\/?$/, "")
-        .replace(/\/$/, "");
+<script>
+
+const SUPABASE_URL =
+  "https://umwztfnsyrbilsuwchik.supabase.co";
+
+const SUPABASE_KEY =
+  "sb_publishable_SSIPoJViFPvqXJtHxUkjjw_7JSKnaSqsss";
+
+const VAPID_PUBLIC_KEY =
+  "BD4_cOCLPGjLuHMAHaCYEp9HyDiBKZAy3QKaOHhr_tVdS8qzw_y5sHecNsp2R-KOl5ivICE8Pjx5wyfHeV-7TCw";
+
+const params =
+  new URLSearchParams(window.location.search);
+
+const deviceId =
+  params.get("device");
+
+const deviceInfo =
+  document.getElementById("deviceInfo");
+
+const status =
+  document.getElementById("status");
+
+const connectButton =
+  document.getElementById("connectButton");
+
+
+function urlBase64ToUint8Array(base64String) {
+
+  const padding =
+    "=".repeat((4 - base64String.length % 4) % 4);
+
+  const base64 =
+    (base64String + padding)
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+
+  const rawData =
+    window.atob(base64);
+
+  return Uint8Array.from(
+    [...rawData].map(char => char.charCodeAt(0))
+  );
+}
+
+
+if (deviceId) {
+
+  deviceInfo.textContent =
+    "Chrome device detected";
+
+} else {
+
+  deviceInfo.textContent =
+    "No device QR information found";
+
+  connectButton.disabled = true;
+}
+
+
+connectButton.addEventListener(
+  "click",
+  async () => {
+
+    if (!deviceId) {
+      status.textContent =
+        "No device was found.";
+      return;
     }
 
-    if (deviceId) {
-      deviceInfo.textContent = "Chrome device detected";
-    } else {
-      deviceInfo.textContent = "No device QR information found";
-      connectButton.disabled = true;
-    }
+    connectButton.disabled = true;
 
-    connectButton.addEventListener("click", async () => {
+    status.textContent =
+      "Requesting notification permission...";
 
-      if (!deviceId) {
-        status.textContent = "No device was found.";
+    try {
+
+      const permission =
+        await Notification.requestPermission();
+
+      if (permission !== "granted") {
+
+        status.textContent =
+          "Notification permission was not granted.";
+
+        connectButton.disabled = false;
         return;
       }
 
-      connectButton.disabled = true;
-      status.textContent = "Connecting...";
 
-      const phoneId =
-        localStorage.getItem("freelancerNotifyPhoneId") ||
-        crypto.randomUUID();
+      status.textContent =
+        "Registering notification service...";
 
-      localStorage.setItem(
-        "freelancerNotifyPhoneId",
-        phoneId
-      );
 
-      try {
+      const registration =
+        await navigator.serviceWorker.register("/sw.js");
 
-        const response = await fetch(
-          `${getBaseUrl()}/rest/v1/phone_devices`,
+
+      await navigator.serviceWorker.ready;
+
+
+      status.textContent =
+        "Creating phone notification subscription...";
+
+
+      const subscription =
+        await registration.pushManager.subscribe({
+
+          userVisibleOnly: true,
+
+          applicationServerKey:
+            urlBase64ToUint8Array(
+              VAPID_PUBLIC_KEY
+            )
+
+        });
+
+
+      const subscriptionJson =
+        subscription.toJSON();
+
+
+      let phoneId =
+        localStorage.getItem(
+          "freelancerNotifyPhoneId"
+        );
+
+
+      if (!phoneId) {
+
+        phoneId =
+          crypto.randomUUID();
+
+        localStorage.setItem(
+          "freelancerNotifyPhoneId",
+          phoneId
+        );
+
+      }
+
+
+      status.textContent =
+        "Saving phone connection...";
+
+
+      const response =
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/phone_devices?on_conflict=phone_id`,
           {
+
             method: "POST",
+
             headers: {
-              "Content-Type": "application/json",
-              "apikey": SUPABASE_KEY,
-              "Authorization": `Bearer ${SUPABASE_KEY}`,
-              "Prefer": "return=minimal"
+
+              "Content-Type":
+                "application/json",
+
+              "apikey":
+                SUPABASE_KEY,
+
+              "Authorization":
+                `Bearer ${SUPABASE_KEY}`,
+
+              "Prefer":
+                "resolution=merge-duplicates,return=minimal"
+
             },
+
             body: JSON.stringify({
-              device_id: deviceId,
-              phone_id: phoneId,
-              status: "connected"
+
+              device_id:
+                deviceId,
+
+              phone_id:
+                phoneId,
+
+              status:
+                "connected",
+
+              push_endpoint:
+                subscriptionJson.endpoint,
+
+              push_p256dh:
+                subscriptionJson.keys.p256dh,
+
+              push_auth:
+                subscriptionJson.keys.auth,
+
+              last_seen:
+                new Date().toISOString(),
+
+              notification_enabled:
+                true
+
             })
+
           }
         );
 
-        if (!response.ok) {
-          const errorText = await response.text();
 
-          status.textContent =
-            "Pairing failed: " +
-            response.status;
+      if (!response.ok) {
 
-          console.log(errorText);
-          connectButton.disabled = false;
-          return;
-        }
+        const errorText =
+          await response.text();
 
-        status.textContent =
-          "✅ Device connected successfully!";
-
-        connectButton.textContent = "Connected";
-
-      } catch (error) {
+        console.log(
+          "Supabase error:",
+          errorText
+        );
 
         status.textContent =
-          "Connection error.";
-
-        console.log(error);
+          "Pairing failed: " +
+          response.status;
 
         connectButton.disabled = false;
+        return;
       }
-    });
-  </script>
+
+
+      status.textContent =
+        "✅ Phone notifications enabled!";
+
+      connectButton.textContent =
+        "Connected";
+
+    }
+
+    catch (error) {
+
+      console.error(error);
+
+      status.textContent =
+        "Error: " + error.message;
+
+      connectButton.disabled = false;
+
+    }
+
+  }
+);
+
+</script>
 
 </body>
 </html>
